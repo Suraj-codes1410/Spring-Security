@@ -2,6 +2,9 @@ package com.suraj.SpringSecEg.controller;
 
 
 import com.suraj.SpringSecEg.Model.Student;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,8 +26,11 @@ public class StudentController {
         return students;
     }
 
-//    @GetMapping("/csrf-token")
-//    public Csr
+
+    @GetMapping("/csrf-token")
+    public CsrfToken getCsrfToken(HttpServletRequest request){
+        return(CsrfToken) request.getAttribute("_csrf");
+    }
 
     @PostMapping("/students")
     public Student addStudent(@RequestBody Student student){
