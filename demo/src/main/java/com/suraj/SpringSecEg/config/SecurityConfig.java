@@ -1,74 +1,58 @@
 package com.suraj.SpringSecEg.config;
 
-import org.springframework.context.annotation.*;
-import org.springframework.security.config.Customizer;
+import com.suraj.SpringSecEg.Service.MyUserDetailsService;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import com.suraj.SpringSecEg.Service.MyUserDetailsService;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.http.HttpMethod;
+
 @Configuration
 public class SecurityConfig {
 
+    // BCrypt encoder
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // Connect DB users
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(MyUserDetailsService userDetailsService) {
-
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-
-        return authProvider;
+    public DaoAuthenticationProvider authenticationProvider(MyUserDetailsService service) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(service);
+        provider.setPasswordEncoder(passwordEncoder());
+        return provider;
     }
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-                                                   DaoAuthenticationProvider authProvider) throws Exception {
 
+    // ⭐ Chain 1 → PUBLIC endpoints (NO authentication at all)
+    @Bean
+    @Order(1)
+    public SecurityFilterChain publicChain(HttpSecurity http) throws Exception {
         http
+                .securityMatcher("/register", "/test")
                 .csrf(csrf -> csrf.disable())
-                .authenticationProvider(authProvider)
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/register/**","/saveUser/**","/error").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .formLogin(form -> form.disable())
-                .httpBasic(Customizer.withDefaults());
+                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
 
         return http.build();
     }
 
-//    @Bean
-//    public SecurityFilterChain securityFilterChain(HttpSecurity http,
-//                                                   DaoAuthenticationProvider authProvider) throws Exception {
-//
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .authenticationProvider(authProvider)   // ⭐ THIS IS THE MISSING LINK
-//                .authorizeHttpRequests(auth -> auth
-//                        .requestMatchers("/register/**").permitAll()
-//                        .requestMatchers("/saveUser/**").permitAll()
-//                        .requestMatchers("/error").permitAll()
-//                        .anyRequest().authenticated()
-//                )
-//                .httpBasic(Customizer.withDefaults())
-//                .exceptionHandling(e -> e.authenticationEntryPoint(
-//                        (req, res, ex) -> res.sendError(401, "Unauthorized")
-//                ))
-//                .formLogin(form -> form.disable());
-//
-//        return http.build();
-//    }
+    // ⭐ Chain 2 → PROTECTED endpoints (students API)
+    @Bean
+    @Order(2)
+    public SecurityFilterChain privateChain(HttpSecurity http,
+                                            DaoAuthenticationProvider provider) throws Exception {
+
+        http
+                .csrf(csrf -> csrf.disable())
+                .authenticationProvider(provider)
+                .authorizeHttpRequests(auth -> auth
+                        .anyRequest().authenticated()
+                )
+                .httpBasic(basic -> {});
+
+        return http.build();
+    }
 }
-
-
-//.authenticationProvider(authProvider)   // 🔥 THIS LINE IS THE KEY
-//                .authorizeHttpRequests(auth -> auth
-//        .requestMatchers("/register", "/saveUser").permitAll()
-//                        .anyRequest().authenticated()
-//                )
